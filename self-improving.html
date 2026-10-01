@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Self-Checking Tower</title>
+<meta name="description" content="How the conductor grows its own code and Jev checks, verifies them up to a fixed core, and keeps Will's queue small.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --ink: #17181a; --muted: #5e636b; --line: #d9dbde; --faint: #eceef0;
+  --trigger: #2f6fed; --agent: #7a4fd6; --check: #c77a00; --will: #1f9d55; --learn: #0f8b8d; --memory: #8a5a2b;
+  --edge: #b9bec5; --glow: rgba(47,111,237,.18);
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111214; --panel: #1a1c1f; --ink: #eceef0; --muted: #a3a8b0; --line: #2d3036; --faint: #23262b;
+    --trigger: #6b9bff; --agent: #a885f2; --check: #f0a43a; --will: #4cc785; --learn: #3cc3c5; --memory: #c99560;
+    --edge: #4a4f57; --glow: rgba(107,155,255,.16);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111214; --panel: #1a1c1f; --ink: #eceef0; --muted: #a3a8b0; --line: #2d3036; --faint: #23262b;
+  --trigger: #6b9bff; --agent: #a885f2; --check: #f0a43a; --will: #4cc785; --learn: #3cc3c5; --memory: #c99560;
+  --edge: #4a4f57; --glow: rgba(107,155,255,.16);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--font); -webkit-font-smoothing: antialiased; }
+p, li, h1, h2, h3 { text-wrap: pretty; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 40px 16px 64px; }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin: 0 0 12px; font-weight: 700; letter-spacing: -.01em; }
+.lead { font-size: 18px; color: var(--muted); max-width: 760px; margin: 0 0 28px; }
+.lead b { color: var(--ink); font-weight: 600; }
+
+.stage { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.controls { display: flex; gap: 8px; align-items: center; }
+button { font: 600 14px var(--font); color: var(--ink); background: var(--faint); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; cursor: pointer; }
+button:hover { border-color: var(--muted); }
+button:focus-visible { outline: 2px solid var(--trigger); outline-offset: 2px; }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; }
+.dots button { width: 28px; height: 28px; padding: 0; border-radius: 50%; font-size: 12px; }
+.dots button[aria-current="step"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.caption { padding: 18px 22px 20px; border-bottom: 1px solid var(--line); min-height: 132px; }
+.caption h2 { margin: 0 0 6px; font-size: 21px; font-weight: 700; }
+.caption p { margin: 0; color: var(--muted); max-width: 900px; font-size: 16.5px; }
+.caption p b { color: var(--ink); font-weight: 600; }
+
+.diagram { overflow-x: auto; }
+svg { display: block; width: 100%; min-width: 900px; height: auto; }
+.box { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; transition: stroke .4s, fill .4s, opacity .4s; }
+.node text { fill: var(--ink); font-family: var(--font); transition: opacity .4s; }
+.node .t { font-size: 16px; font-weight: 700; }
+.node .s { font-size: 11.5px; fill: var(--muted); }
+.node .chip { stroke: none; }
+.node { transition: opacity .4s; }
+.dim .node:not(.on), .dim .zone:not(.on) { opacity: .28; }
+.node.on .box { stroke-width: 2.5; filter: drop-shadow(0 6px 16px var(--glow)); }
+.k-trigger .chip { fill: var(--trigger); } .k-trigger.on .box { stroke: var(--trigger); }
+.k-agent .chip { fill: var(--agent); }     .k-agent.on .box { stroke: var(--agent); }
+.k-check .chip { fill: var(--check); }     .k-check.on .box { stroke: var(--check); }
+.k-will .chip { fill: var(--will); }       .k-will.on .box { stroke: var(--will); }
+.k-learn .chip { fill: var(--learn); }     .k-learn.on .box { stroke: var(--learn); }
+.k-memory .chip { fill: var(--memory); }   .k-memory.on .box { stroke: var(--memory); }
+
+.zone rect { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 2 6; stroke-linecap: round; }
+.zone text { fill: var(--muted); font: 600 12.5px var(--font); letter-spacing: .04em; text-transform: uppercase; }
+.zone { transition: opacity .4s; }
+.guard rect { fill: var(--faint); stroke: var(--check); stroke-width: 1.5; stroke-dasharray: 6 5; }
+.guard.on rect { animation: march 1.2s linear infinite; filter: drop-shadow(0 4px 14px rgba(199,122,0,.25)); }
+.guard text { fill: var(--ink); text-transform: none; letter-spacing: 0; }
+.guard .gt { font: 700 14px var(--font); } .guard .gs { font: 500 12.5px var(--font); fill: var(--muted); }
+
+.edge { fill: none; stroke: var(--edge); stroke-width: 2; transition: stroke .4s, opacity .4s; }
+.dim .edge:not(.on) { opacity: .25; }
+.edge.on { stroke: var(--ink); stroke-dasharray: 7 7; animation: flow .8s linear infinite; }
+.dot { fill: var(--trigger); opacity: 0; transition: opacity .3s; }
+.dot.on { opacity: 1; }
+.lbl { font: 600 12px var(--font); fill: var(--muted); }
+@keyframes flow { to { stroke-dashoffset: -14; } }
+@keyframes march { to { stroke-dashoffset: -22; } }
+@media (prefers-reduced-motion: reduce) {
+  .edge.on, .guard.on rect { animation: none; }
+  .dot { display: none; }
+}
+
+.legend { display: flex; flex-wrap: wrap; gap: 14px 20px; padding: 14px 22px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 7px; vertical-align: -1px; background: var(--c); }
+
+.ideas { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 28px; }
+.idea { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; }
+.idea h3 { margin: 0 0 6px; font-size: 18px; }
+.idea p { margin: 0; color: var(--muted); }
+.tower text.lvl { font: 700 12px var(--font); letter-spacing: .06em; text-transform: uppercase; fill: var(--muted); }
+.foot { margin-top: 28px; font-size: 13.5px; color: var(--muted); }
+.theme { position: absolute; top: 16px; right: 16px; }
+</style>
+</head>
+<body>
+<button class="theme" id="theme" aria-label="Switch light or dark">Theme</button>
+<main class="wrap">
+  <p class="eyebrow">Digital Will Ads · the conductor · part 2</p>
+  <h1>The Self-Checking Tower</h1>
+  <p class="lead"><b>The system writes its own checks, proves them, and checks the checks, up to a fixed core it can never change.</b> You answer only the questions it truly cannot, and each answer is asked once. <a href="./" style="color:inherit">Part 1: the loop</a>.</p>
+
+  <section class="stage" aria-label="Animated tour of self-improving verification">
+    <div class="bar">
+      <div class="controls">
+        <button id="prev" aria-label="Previous step">Back</button>
+        <button id="play" aria-label="Pause the tour">Pause</button>
+        <button id="next" aria-label="Next step">Next</button>
+      </div>
+      <nav class="dots" id="dots" aria-label="Steps"></nav>
+    </div>
+    <div class="caption" aria-live="polite"><h2 id="ctitle"></h2><p id="ctext"></p></div>
+    <div class="diagram">
+      <svg id="svg" viewBox="0 0 1200 720" role="img" aria-labelledby="ctitle ctext">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--edge)"/></marker>
+          <marker id="arrowOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--ink)"/></marker>
+        </defs>
+        <g class="zone"><rect x="380" y="186" width="420" height="96" rx="16"/><text x="398" y="182">Level 3 · verifies the improvers</text></g><g class="zone"><rect x="270" y="326" width="660" height="96" rx="16"/><text x="288" y="322">Level 2 · verifies the checks</text></g><g class="zone"><rect x="380" y="466" width="440" height="96" rx="16"/><text x="398" y="462">Level 1 · verifies the work</text></g><g class="zone"><rect x="490" y="606" width="220" height="96" rx="16"/><text x="508" y="602">Level 0</text></g><g class="zone"><rect x="22" y="300" width="216" height="402" rx="16"/><text x="40" y="320">How checks are born</text></g><g class="zone"><rect x="962" y="160" width="216" height="402" rx="16"/><text x="980" y="180">What reaches Will</text></g>
+        <g class="zone guard" id="n-core"><rect x="260" y="52" width="680" height="84" rx="14"/><text class="gt" x="282" y="80">Fixed core · only Will changes it</text><text class="gs" x="282" y="102">The guard · the change gate · golden cases · real outcomes as ground truth</text><text class="gs" x="282" y="122">The loop can add checks under it. It can never edit it or loosen it.</text></g>
+        <path class="edge" id="e-work-code" d="M560 620 C 560 590, 490 590, 490 548"/>
+<path class="edge" id="e-work-jev" d="M640 620 C 640 590, 710 590, 710 548"/>
+<path class="edge" id="e-work-signals" d="M510 654 L 220 654"/>
+<path class="edge" id="e-signals-factory" d="M130 620 L 130 548"/>
+<path class="edge" id="e-factory-shadow" d="M130 480 L 130 408"/>
+<path class="edge" id="e-shadow-gate" d="M130 340 C 130 230, 300 234, 510 234"/>
+<path class="edge" id="e-gate-code" d="M560 268 C 560 300, 440 300, 440 330 L 440 480"/>
+<path class="edge" id="e-code-score" d="M430 480 C 430 440, 380 440, 380 408"/>
+<path class="edge" id="e-jev-score" d="M650 480 C 650 440, 440 450, 420 408"/>
+<path class="edge" id="e-jev-audit" d="M680 480 C 680 440, 600 440, 600 408"/>
+<path class="edge" id="e-score-demote" d="M470 374 C 490 290, 760 290, 790 340"/>
+<path class="edge" id="e-audit-demote" d="M690 374 L 730 374"/>
+<path class="edge" id="e-demote-shadow" d="M820 408 C 820 445, 260 445, 220 390"/>
+<path class="edge" id="e-jev-unknown" d="M800 514 L 980 514"/>
+<path class="edge" id="e-unknown-queue" d="M1070 480 L 1070 408"/>
+<path class="edge" id="e-queue-label" d="M1070 340 L 1070 268"/>
+<path class="edge" id="e-label-core" d="M1070 200 C 1070 120, 1000 94, 940 94"/>
+<path class="edge" id="e-core-gate" d="M600 136 L 600 200"/>
+        <g class="node k-agent" id="n-work"><rect class="box" x="510" y="620" width="180" height="68" rx="14"/><rect class="chip" x="510" y="620" width="6" height="68" rx="3"/><text class="t" x="528" y="649">The work</text><text class="s" x="528" y="670">Threads, sends, pushes</text></g><g class="node k-check" id="n-code"><rect class="box" x="400" y="480" width="180" height="68" rx="14"/><rect class="chip" x="400" y="480" width="6" height="68" rx="3"/><text class="t" x="418" y="509">Code checks</text><text class="s" x="418" y="530">Rules that are mechanical</text></g><g class="node k-check" id="n-jev"><rect class="box" x="620" y="480" width="180" height="68" rx="14"/><rect class="chip" x="620" y="480" width="6" height="68" rx="3"/><text class="t" x="638" y="509">Jev checks</text><text class="s" x="638" y="530">Rules that need judgment</text></g><g class="node k-learn" id="n-score"><rect class="box" x="290" y="340" width="180" height="68" rx="14"/><rect class="chip" x="290" y="340" width="6" height="68" rx="3"/><text class="t" x="308" y="369">Scorecards</text><text class="s" x="308" y="390">Each check vs outcomes</text></g><g class="node k-learn" id="n-audit"><rect class="box" x="510" y="340" width="180" height="68" rx="14"/><rect class="chip" x="510" y="340" width="6" height="68" rx="3"/><text class="t" x="528" y="369">Jev audits Jev</text><text class="s" x="528" y="390">A second question, sampled</text></g><g class="node k-learn" id="n-demote"><rect class="box" x="730" y="340" width="180" height="68" rx="14"/><rect class="chip" x="730" y="340" width="6" height="68" rx="3"/><text class="t" x="748" y="369">Demote or retire</text><text class="s" x="748" y="390">Noisy or drifting checks</text></g><g class="node k-check" id="n-gate"><rect class="box" x="510" y="200" width="180" height="68" rx="14"/><rect class="chip" x="510" y="200" width="6" height="68" rx="3"/><text class="t" x="528" y="229">Change gate</text><text class="s" x="528" y="250">Backtest · never looser</text></g><g class="node k-learn" id="n-signals"><rect class="box" x="40" y="620" width="180" height="68" rx="14"/><rect class="chip" x="40" y="620" width="6" height="68" rx="3"/><text class="t" x="58" y="649">Miss signals</text><text class="s" x="58" y="670">Edits, outcomes, conflicts</text></g><g class="node k-agent" id="n-factory"><rect class="box" x="40" y="480" width="180" height="68" rx="14"/><rect class="chip" x="40" y="480" width="6" height="68" rx="3"/><text class="t" x="58" y="509">Check factory</text><text class="s" x="58" y="530">Writes code, Jev, or both</text></g><g class="node k-learn" id="n-shadow"><rect class="box" x="40" y="340" width="180" height="68" rx="14"/><rect class="chip" x="40" y="340" width="6" height="68" rx="3"/><text class="t" x="58" y="369">Shadow mode</text><text class="s" x="58" y="390">Runs and logs, never blocks</text></g><g class="node k-will" id="n-unknown"><rect class="box" x="980" y="480" width="180" height="68" rx="14"/><rect class="chip" x="980" y="480" width="6" height="68" rx="3"/><text class="t" x="998" y="509">True unknowns</text><text class="s" x="998" y="530">Code and Jev both unsure</text></g><g class="node k-will" id="n-queue"><rect class="box" x="980" y="340" width="180" height="68" rx="14"/><rect class="chip" x="980" y="340" width="6" height="68" rx="3"/><text class="t" x="998" y="369">Will's queue</text><text class="s" x="998" y="390">Capped · ranked · clustered</text></g><g class="node k-will" id="n-label"><rect class="box" x="980" y="200" width="180" height="68" rx="14"/><rect class="chip" x="980" y="200" width="6" height="68" rx="3"/><text class="t" x="998" y="229">Answer → rule</text><text class="s" x="998" y="250">Plus a test · asked once</text></g>
+        <g id="dots-layer"></g>
+      </svg>
+    </div>
+    <div class="legend">
+      <span style="--c: var(--agent)">Agents</span>
+      <span style="--c: var(--check)">Checks and the gate</span>
+      <span style="--c: var(--learn)">How checks are born and kept honest</span>
+      <span style="--c: var(--will)">What reaches Will</span>
+    </div>
+  </section>
+
+  <section class="ideas">
+    <div class="idea"><h3>Prove, then block</h3><p>A new check earns its place in shadow mode and on golden cases it never saw. Only then can it stop work. That is what keeps false alarms from swamping you.</p></div>
+    <div class="idea"><h3>Different eyes</h3><p>Jev checking Jev shares blind spots. So the top of every chain is a different kind of evidence: code, a differently phrased question, or a real outcome.</p></div>
+    <div class="idea"><h3>Stricter is free, looser is yours</h3><p>The loop may add and tighten checks on its own. Anything that loosens a check, deletes one, or touches the core waits for you.</p></div>
+  </section>
+  <p class="foot">Pitfalls this design is built against: agents gaming the checks, alarm fatigue, shared blind spots, slow drift, endless verifier stacks, and a queue that never empties.</p>
+</main>
+<script>
+const ALL_NODES = ["n-work", "n-code", "n-jev", "n-score", "n-audit", "n-demote", "n-gate", "n-signals", "n-factory", "n-shadow", "n-unknown", "n-queue", "n-label", "n-core"];
+const ALL_EDGES = [...document.querySelectorAll(".edge")].map(e => e.id);
+const STAGES = [
+  { t: "The whole idea", d: "The system checks its work, checks its checks, and checks how it changes its checks. Each level up is smaller and slower to change. At the top is a <b>fixed core only you change</b>, so the climb ends somewhere solid.", n: ALL_NODES, e: ALL_EDGES },
+  { t: "1. The work, checked", d: "Agents do the work. <b>Code checks</b> take the mechanical rules. <b>Jev checks</b> take the rules that need judgment. Nothing counts as done until a check says so.", n: ["n-work", "n-code", "n-jev"], e: ["e-work-code", "e-work-jev"] },
+  { t: "2. A miss is a signal", d: "A miss shows up as a signal: you edit a draft, an outcome goes wrong later, code and Jev disagree, or two Jev questions disagree. <b>Every signal is saved with its real case.</b>", n: ["n-work", "n-signals"], e: ["e-work-signals"] },
+  { t: "3. The check factory", d: "An agent turns the miss into a new check: <b>code</b> when the rule is mechanical, <b>Jev</b> when it needs judgment, <b>code to narrow and Jev to decide</b> when it needs both. The real case becomes its first test.", n: ["n-signals", "n-factory"], e: ["e-signals-factory"] },
+  { t: "4. Shadow first", d: "A new check runs in <b>shadow mode</b>: it runs on every real case and logs what it would do, but it blocks nothing. This is where false alarms show up without hurting anyone.", n: ["n-factory", "n-shadow"], e: ["e-factory-shadow"] },
+  { t: "5. The gate decides promotion", d: "The <b>change gate</b> promotes a check only when it catches the miss, stays quiet on the <b>held-out golden cases</b> it never saw, and makes nothing looser. Then it starts to block.", n: ["n-shadow", "n-gate", "n-code"], e: ["e-shadow-gate", "e-gate-code"] },
+  { t: "6. Every check gets a score", d: "Each check has a <b>scorecard</b> against real outcomes: how often it was right, how often it cried wolf. A second Jev question audits a sample of Jev's answers, phrased differently, to catch shared blind spots.", n: ["n-code", "n-jev", "n-score", "n-audit"], e: ["e-code-score", "e-jev-score", "e-jev-audit"] },
+  { t: "7. Bad checks fall back", d: "A check that gets noisy or drifts is <b>demoted to shadow</b> automatically. It is never deleted without you, so the system cannot quietly weaken itself.", n: ["n-score", "n-audit", "n-demote", "n-shadow"], e: ["e-score-demote", "e-audit-demote", "e-demote-shadow"] },
+  { t: "8. Only true unknowns reach you", d: "When code and Jev are both unsure and the stakes are real, the case waits for you. Your queue is <b>capped</b>, <b>ranked</b> by what your answer is worth, and <b>clustered</b>, so one answer covers many cases. Everything else takes the safe default.", n: ["n-jev", "n-unknown", "n-queue"], e: ["e-jev-unknown", "e-unknown-queue"] },
+  { t: "9. One answer, never asked twice", d: "Your answer becomes a <b>rule and a test</b>, and the case joins the golden set. The same question never reaches you again, so your queue shrinks as the system grows.", n: ["n-queue", "n-label", "n-core"], e: ["e-queue-label", "e-label-core"] },
+  { t: "10. The fixed core ends the regress", d: "Verifiers of verifiers could go up forever. They stop at a small core that <b>never edits itself</b>: the guard, the change gate, the golden cases, and real outcomes. It can only get stricter, and only you change it.", n: ["n-core", "n-gate"], e: ["e-core-gate"] }
+];
+const COLORS = {"e-work-signals": "--learn", "e-signals-factory": "--learn", "e-factory-shadow": "--learn", "e-shadow-gate": "--learn", "e-score-demote": "--learn", "e-audit-demote": "--learn", "e-demote-shadow": "--learn", "e-jev-unknown": "--will", "e-unknown-queue": "--will", "e-queue-label": "--will", "e-label-core": "--will", "e-core-gate": "--check", "e-gate-code": "--check"};
+const svg = document.getElementById("svg"), layer = document.getElementById("dots-layer");
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const NS = "http://www.w3.org/2000/svg";
+for (const id of ALL_EDGES) {                       // one travelling dot per edge, shown only when the edge is on
+  document.getElementById(id).setAttribute("marker-end", "url(#arrow)");
+  const c = document.createElementNS(NS, "circle");
+  c.setAttribute("r", "5"); c.setAttribute("class", "dot"); c.dataset.edge = id;
+  c.style.fill = `var(${COLORS[id] || "--agent"})`;
+  const m = document.createElementNS(NS, "animateMotion");
+  m.setAttribute("dur", "1.6s"); m.setAttribute("repeatCount", "indefinite");
+  const mp = document.createElementNS(NS, "mpath"); mp.setAttribute("href", "#" + id);
+  m.appendChild(mp); c.appendChild(m); layer.appendChild(c);
+}
+
+let i = 0, playing = !reduced, timer = null;
+const dots = document.getElementById("dots");
+STAGES.forEach((s, k) => {
+  const b = document.createElement("button");
+  b.textContent = k === 0 ? "•" : k; b.setAttribute("aria-label", s.t);
+  b.onclick = () => { stop(); show(k); };
+  dots.appendChild(b);
+});
+
+function show(k) {
+  i = (k + STAGES.length) % STAGES.length;
+  const s = STAGES[i];
+  document.getElementById("ctitle").textContent = s.t;
+  document.getElementById("ctext").innerHTML = s.d;
+  svg.classList.toggle("dim", i !== 0);
+  for (const id of ALL_NODES) document.getElementById(id).classList.toggle("on", s.n.includes(id));
+  for (const id of ALL_EDGES) {
+    const on = s.e.includes(id), el = document.getElementById(id);
+    el.classList.toggle("on", on);
+    el.setAttribute("marker-end", on ? "url(#arrowOn)" : "url(#arrow)");
+  }
+  for (const c of layer.children) c.classList.toggle("on", s.e.includes(c.dataset.edge));
+  [...dots.children].forEach((b, k2) => b.toggleAttribute("aria-current", k2 === i) || (k2 === i && b.setAttribute("aria-current", "step")));
+  [...dots.children].forEach((b, k2) => k2 === i ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current"));
+}
+function tick() { show(i + 1); }
+function play() { playing = true; document.getElementById("play").textContent = "Pause"; clearInterval(timer); timer = setInterval(tick, 7000); }
+function stop() { playing = false; document.getElementById("play").textContent = "Play"; clearInterval(timer); }
+document.getElementById("play").onclick = () => playing ? stop() : play();
+document.getElementById("next").onclick = () => { stop(); show(i + 1); };
+document.getElementById("prev").onclick = () => { stop(); show(i - 1); };
+addEventListener("keydown", e => {
+  if (e.key === "ArrowRight") { stop(); show(i + 1); }
+  if (e.key === "ArrowLeft") { stop(); show(i - 1); }
+  if (e.key === " ") { e.preventDefault(); playing ? stop() : play(); }
+});
+document.getElementById("theme").onclick = () => {
+  const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("theme", r.dataset.theme); } catch (e) {}
+};
+try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+show(0);
+if (playing) play(); else document.getElementById("play").textContent = "Play";
+</script>
+</body>
+</html>
