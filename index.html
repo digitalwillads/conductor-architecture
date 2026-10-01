@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Verification Loop</title>
+<meta name="description" content="How DWA's client agents work, and what keeps them honest: an animated tour of the conductor.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --ink: #17181a; --muted: #5e636b; --line: #d9dbde; --faint: #eceef0;
+  --trigger: #2f6fed; --agent: #7a4fd6; --check: #c77a00; --will: #1f9d55; --learn: #0f8b8d; --memory: #8a5a2b;
+  --edge: #b9bec5; --glow: rgba(47,111,237,.18);
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111214; --panel: #1a1c1f; --ink: #eceef0; --muted: #a3a8b0; --line: #2d3036; --faint: #23262b;
+    --trigger: #6b9bff; --agent: #a885f2; --check: #f0a43a; --will: #4cc785; --learn: #3cc3c5; --memory: #c99560;
+    --edge: #4a4f57; --glow: rgba(107,155,255,.16);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111214; --panel: #1a1c1f; --ink: #eceef0; --muted: #a3a8b0; --line: #2d3036; --faint: #23262b;
+  --trigger: #6b9bff; --agent: #a885f2; --check: #f0a43a; --will: #4cc785; --learn: #3cc3c5; --memory: #c99560;
+  --edge: #4a4f57; --glow: rgba(107,155,255,.16);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--font); -webkit-font-smoothing: antialiased; }
+p, li, h1, h2, h3 { text-wrap: pretty; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 40px 16px 64px; }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin: 0 0 12px; font-weight: 700; letter-spacing: -.01em; }
+.lead { font-size: 18px; color: var(--muted); max-width: 760px; margin: 0 0 28px; }
+.lead b { color: var(--ink); font-weight: 600; }
+
+.stage { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.controls { display: flex; gap: 8px; align-items: center; }
+button { font: 600 14px var(--font); color: var(--ink); background: var(--faint); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; cursor: pointer; }
+button:hover { border-color: var(--muted); }
+button:focus-visible { outline: 2px solid var(--trigger); outline-offset: 2px; }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; }
+.dots button { width: 28px; height: 28px; padding: 0; border-radius: 50%; font-size: 12px; }
+.dots button[aria-current="step"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.caption { padding: 18px 22px 20px; border-bottom: 1px solid var(--line); min-height: 132px; }
+.caption h2 { margin: 0 0 6px; font-size: 21px; font-weight: 700; }
+.caption p { margin: 0; color: var(--muted); max-width: 900px; font-size: 16.5px; }
+.caption p b { color: var(--ink); font-weight: 600; }
+
+.diagram { overflow-x: auto; }
+svg { display: block; width: 100%; min-width: 900px; height: auto; }
+.box { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; transition: stroke .4s, fill .4s, opacity .4s; }
+.node text { fill: var(--ink); font-family: var(--font); transition: opacity .4s; }
+.node .t { font-size: 16px; font-weight: 700; }
+.node .s { font-size: 12.5px; fill: var(--muted); }
+.node .chip { stroke: none; }
+.node { transition: opacity .4s; }
+.dim .node:not(.on), .dim .zone:not(.on) { opacity: .28; }
+.node.on .box { stroke-width: 2.5; filter: drop-shadow(0 6px 16px var(--glow)); }
+.k-trigger .chip { fill: var(--trigger); } .k-trigger.on .box { stroke: var(--trigger); }
+.k-agent .chip { fill: var(--agent); }     .k-agent.on .box { stroke: var(--agent); }
+.k-check .chip { fill: var(--check); }     .k-check.on .box { stroke: var(--check); }
+.k-will .chip { fill: var(--will); }       .k-will.on .box { stroke: var(--will); }
+.k-learn .chip { fill: var(--learn); }     .k-learn.on .box { stroke: var(--learn); }
+.k-memory .chip { fill: var(--memory); }   .k-memory.on .box { stroke: var(--memory); }
+
+.zone rect { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 2 6; stroke-linecap: round; }
+.zone text { fill: var(--muted); font: 600 12.5px var(--font); letter-spacing: .04em; text-transform: uppercase; }
+.zone { transition: opacity .4s; }
+.guard rect { fill: var(--faint); stroke: var(--check); stroke-width: 1.5; stroke-dasharray: 6 5; }
+.guard.on rect { animation: march 1.2s linear infinite; filter: drop-shadow(0 4px 14px rgba(199,122,0,.25)); }
+.guard text { fill: var(--ink); text-transform: none; letter-spacing: 0; }
+.guard .gt { font: 700 14px var(--font); } .guard .gs { font: 500 12.5px var(--font); fill: var(--muted); }
+
+.edge { fill: none; stroke: var(--edge); stroke-width: 2; transition: stroke .4s, opacity .4s; }
+.dim .edge:not(.on) { opacity: .25; }
+.edge.on { stroke: var(--ink); stroke-dasharray: 7 7; animation: flow .8s linear infinite; }
+.dot { fill: var(--trigger); opacity: 0; transition: opacity .3s; }
+.dot.on { opacity: 1; }
+.lbl { font: 600 12px var(--font); fill: var(--muted); }
+@keyframes flow { to { stroke-dashoffset: -14; } }
+@keyframes march { to { stroke-dashoffset: -22; } }
+@media (prefers-reduced-motion: reduce) {
+  .edge.on, .guard.on rect { animation: none; }
+  .dot { display: none; }
+}
+
+.legend { display: flex; flex-wrap: wrap; gap: 14px 20px; padding: 14px 22px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 7px; vertical-align: -1px; background: var(--c); }
+
+.ideas { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 28px; }
+.idea { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; }
+.idea h3 { margin: 0 0 6px; font-size: 18px; }
+.idea p { margin: 0; color: var(--muted); }
+.foot { margin-top: 28px; font-size: 13.5px; color: var(--muted); }
+.theme { position: absolute; top: 16px; right: 16px; }
+</style>
+</head>
+<body>
+<button class="theme" id="theme" aria-label="Switch light or dark">Theme</button>
+<main class="wrap">
+  <p class="eyebrow">Digital Will Ads · the conductor</p>
+  <h1>The Verification Loop</h1>
+  <p class="lead"><b>Agents do the work. Verifiers decide if it is right. Will approves what leaves the building.</b> Every client gets one thread a day that checks, fixes, and checks again, and every miss turns into a new check.</p>
+
+  <section class="stage" aria-label="Animated tour of the architecture">
+    <div class="bar">
+      <div class="controls">
+        <button id="prev" aria-label="Previous step">Back</button>
+        <button id="play" aria-label="Pause the tour">Pause</button>
+        <button id="next" aria-label="Next step">Next</button>
+      </div>
+      <nav class="dots" id="dots" aria-label="Steps"></nav>
+    </div>
+    <div class="caption" aria-live="polite">
+      <h2 id="ctitle"></h2>
+      <p id="ctext"></p>
+    </div>
+    <div class="diagram">
+      <svg id="svg" viewBox="0 0 1200 720" role="img" aria-labelledby="ctitle ctext">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--edge)"/>
+          </marker>
+          <marker id="arrowOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--ink)"/>
+          </marker>
+        </defs>
+
+        <!-- zones -->
+        <g class="zone" id="z-triggers"><rect x="22" y="40" width="226" height="222" rx="18"/><text x="40" y="62">What starts work</text></g>
+        <g class="zone" id="z-thread"><rect x="535" y="40" width="640" height="370" rx="20"/><text x="555" y="62">One client thread · normal Claude Code · a tab in Clients</text></g>
+        <g class="zone" id="z-learn"><rect x="22" y="440" width="476" height="262" rx="18"/><text x="40" y="462">How the checks grow</text></g>
+        <g class="zone" id="z-trust"><rect x="745" y="566" width="430" height="136" rx="18"/><text x="763" y="588">How autonomy grows</text></g>
+
+        <!-- guard band inside the thread -->
+        <g class="zone guard" id="n-guard">
+          <rect x="555" y="330" width="600" height="62" rx="12"/>
+          <text class="gt" x="575" y="356">The guard checks every tool call</text>
+          <text class="gs" x="575" y="377">No money · no messages to people · no account changes · no edits to verifier code</text>
+        </g>
+
+        <!-- edges -->
+        <path class="edge" id="e-clock-cond" d="M230 116 C 262 116, 262 160, 290 160"/>
+        <path class="edge" id="e-heart-cond" d="M230 214 C 262 214, 262 172, 290 172"/>
+        <path class="edge" id="e-cond-catch" d="M470 166 C 520 166, 520 120, 555 120"/>
+        <path class="edge" id="e-note-catch" d="M470 296 C 520 296, 645 250, 645 154"/>
+        <path class="edge" id="e-catch-verify" d="M735 120 L 765 120"/>
+        <path class="edge" id="e-verify-work" d="M945 120 L 975 120"/>
+        <path class="edge" id="e-work-report" d="M1065 154 L 1065 214"/>
+        <path class="edge" id="e-report-show" d="M975 248 L 945 248"/>
+        <path class="edge" id="e-show-will" d="M855 282 C 855 330, 700 420, 790 486"/>
+        <path class="edge" id="e-will-act" d="M945 520 L 975 520"/>
+        <path class="edge" id="e-act-verify" d="M1155 506 C 1192 506, 1192 92, 1110 92 L 870 92 L 870 86"/>
+        <path class="edge" id="e-act-edit" d="M1065 554 L 1065 612"/>
+        <path class="edge" id="e-edit-ladder" d="M975 646 L 945 646"/>
+        <path class="edge" id="e-ladder-guard" d="M765 646 C 712 646, 712 470, 712 394"/>
+        <path class="edge" id="e-miss-vgate" d="M220 520 L 290 520"/>
+        <path class="edge" id="e-vgate-cgate" d="M380 554 L 380 612"/>
+        <path class="edge" id="e-cgate-verify" d="M470 646 C 516 646, 516 180, 560 180 L 790 180 L 790 158"/>
+        <text class="lbl" x="1112" y="84">verify again until it passes</text>
+
+        <!-- nodes: x, y, w=180, h=68 -->
+        <g class="node k-trigger" id="n-clock"><rect class="box" x="40" y="82" width="190" height="68" rx="14"/><rect class="chip" x="40" y="82" width="6" height="68" rx="3"/><text class="t" x="58" y="111">Clock</text><text class="s" x="58" y="132">A full check for each client, daily</text></g>
+        <g class="node k-trigger" id="n-heart"><rect class="box" x="40" y="180" width="190" height="68" rx="14"/><rect class="chip" x="40" y="180" width="6" height="68" rx="3"/><text class="t" x="58" y="209">Heartbeat</text><text class="s" x="58" y="230">Email, meetings, texts · 5 min</text></g>
+        <g class="node k-agent" id="n-cond"><rect class="box" x="290" y="132" width="180" height="68" rx="14"/><rect class="chip" x="290" y="132" width="6" height="68" rx="3"/><text class="t" x="308" y="161">Conductor</text><text class="s" x="308" y="182">Opens one thread per client</text></g>
+        <g class="node k-memory" id="n-note"><rect class="box" x="290" y="262" width="180" height="68" rx="14"/><rect class="chip" x="290" y="262" width="6" height="68" rx="3"/><text class="t" x="308" y="291">Client notebook</text><text class="s" x="308" y="312">Goals, promises, log</text></g>
+
+        <g class="node k-agent" id="n-catch"><rect class="box" x="555" y="86" width="180" height="68" rx="14"/><rect class="chip" x="555" y="86" width="6" height="68" rx="3"/><text class="t" x="573" y="115">Catch up</text><text class="s" x="573" y="136">Notebook, email, meetings</text></g>
+        <g class="node k-check" id="n-verify"><rect class="box" x="765" y="86" width="180" height="68" rx="14"/><rect class="chip" x="765" y="86" width="6" height="68" rx="3"/><text class="t" x="783" y="115">verify</text><text class="s" x="783" y="136">The verifier, as a tool</text></g>
+        <g class="node k-agent" id="n-work"><rect class="box" x="975" y="86" width="180" height="68" rx="14"/><rect class="chip" x="975" y="86" width="6" height="68" rx="3"/><text class="t" x="993" y="115">Work each finding</text><text class="s" x="993" y="136">By its playbook</text></g>
+        <g class="node k-check" id="n-report"><rect class="box" x="975" y="214" width="180" height="68" rx="14"/><rect class="chip" x="975" y="214" width="6" height="68" rx="3"/><text class="t" x="993" y="243">verify report</text><text class="s" x="993" y="264">Voice · Ads Validator</text></g>
+        <g class="node k-agent" id="n-show"><rect class="box" x="765" y="214" width="180" height="68" rx="14"/><rect class="chip" x="765" y="214" width="6" height="68" rx="3"/><text class="t" x="783" y="243">Show Will</text><text class="s" x="783" y="264">The exact email or change</text></g>
+
+        <g class="node k-will" id="n-will"><rect class="box" x="765" y="486" width="180" height="68" rx="14"/><rect class="chip" x="765" y="486" width="6" height="68" rx="3"/><text class="t" x="783" y="515">Will</text><text class="s" x="783" y="536">"do it"</text></g>
+        <g class="node k-check" id="n-act"><rect class="box" x="975" y="486" width="180" height="68" rx="14"/><rect class="chip" x="975" y="486" width="6" height="68" rx="3"/><text class="t" x="993" y="515">send / push</text><text class="s" x="993" y="536">Proves approval, acts once</text></g>
+
+        <g class="node k-learn" id="n-edit"><rect class="box" x="975" y="612" width="180" height="68" rx="14"/><rect class="chip" x="975" y="612" width="6" height="68" rx="3"/><text class="t" x="993" y="641">Edit rate</text><text class="s" x="993" y="662">How much Will changed</text></g>
+        <g class="node k-learn" id="n-ladder"><rect class="box" x="765" y="612" width="180" height="68" rx="14"/><rect class="chip" x="765" y="612" width="6" height="68" rx="3"/><text class="t" x="783" y="641">Autonomy ladder</text><text class="s" x="783" y="662">A type goes alone at 90%</text></g>
+
+        <g class="node k-learn" id="n-miss"><rect class="box" x="40" y="486" width="180" height="68" rx="14"/><rect class="chip" x="40" y="486" width="6" height="68" rx="3"/><text class="t" x="58" y="515">A miss</text><text class="s" x="58" y="536">Wrong claim, false alarm</text></g>
+        <g class="node k-learn" id="n-vgate"><rect class="box" x="290" y="486" width="180" height="68" rx="14"/><rect class="chip" x="290" y="486" width="6" height="68" rx="3"/><text class="t" x="308" y="515">Verifier gate</text><text class="s" x="308" y="536">Builds the new check</text></g>
+        <g class="node k-check" id="n-cgate"><rect class="box" x="290" y="612" width="180" height="68" rx="14"/><rect class="chip" x="290" y="612" width="6" height="68" rx="3"/><text class="t" x="308" y="641">Change gate</text><text class="s" x="308" y="662">Tests + Jev · looser → Will</text></g>
+
+        <g id="dots-layer"></g>
+      </svg>
+    </div>
+    <div class="legend">
+      <span style="--c: var(--trigger)">What starts work</span>
+      <span style="--c: var(--agent)">The agent</span>
+      <span style="--c: var(--check)">Checks in code and Jev</span>
+      <span style="--c: var(--will)">Will</span>
+      <span style="--c: var(--learn)">Learning</span>
+      <span style="--c: var(--memory)">Memory</span>
+    </div>
+  </section>
+
+  <section class="ideas">
+    <div class="idea"><h3>The verifier is a tool</h3><p>The agent calls the check itself, in its own thread, as often as it needs. It never grades its own work: code and Jev decide if the work is right.</p></div>
+    <div class="idea"><h3>Nothing leaves without proof</h3><p>An email or an account change goes out only when the transcript shows Will saw that exact text and said yes in plain words. The guard blocks every other way.</p></div>
+    <div class="idea"><h3>Misses become checks</h3><p>"Be more careful" is never the fix. Each miss becomes a check with a test from the real case, and the change gate makes sure no check gets looser without Will.</p></div>
+  </section>
+  <p class="foot">One thread per client per day. Events from 08:00 to 02:00 ET; held overnight. Every action is in the thread, so Will can audit all of it.</p>
+</main>
+
+<script>
+const ALL_NODES = ["n-clock","n-heart","n-cond","n-note","n-catch","n-verify","n-work","n-report","n-show","n-will","n-act","n-edit","n-ladder","n-miss","n-vgate","n-cgate","n-guard"];
+const ALL_EDGES = [...document.querySelectorAll(".edge")].map(e => e.id);
+const STAGES = [
+  { t: "The whole loop", d: "Something happens, a thread checks, the agent fixes, Will approves what leaves, and the thread <b>checks again until it passes</b>. Two slower loops sit under it: edits earn autonomy, and misses become new checks.", n: ALL_NODES, e: ALL_EDGES },
+  { t: "1. Something happens", d: "A <b>clock</b> starts each client's full check once a day. A <b>heartbeat</b> looks every 5 minutes for new client email, finished meetings, and texts. From 02:00 to 08:00 ET it holds them until morning.", n: ["n-clock","n-heart"], e: [] },
+  { t: "2. One thread per client", d: "The conductor opens <b>one thread a day for each client</b>: a normal Claude Code session, as a tab in the Clients workspace. New events are typed into that same thread, so the whole day is one record.", n: ["n-clock","n-heart","n-cond","n-catch"], e: ["e-clock-cond","e-heart-cond","e-cond-catch"] },
+  { t: "3. Catch up", d: "The thread reads the <b>client notebook</b>: goals in the client's words, promises, and the log. Then it reads what is new in email and meetings and writes it down. The notebook is the one memory for the client.", n: ["n-note","n-catch"], e: ["e-note-catch"] },
+  { t: "4. The verifier is a tool", d: "The thread calls <b>verify</b>. Code checks the live accounts, the inbox, and the notebook, and lists every rule that fails. The agent does not decide if things are fine. The check does.", n: ["n-catch","n-verify"], e: ["e-catch-verify"] },
+  { t: "5. Work each finding", d: "For each failure the agent follows that rule's <b>playbook</b> and finds the cause in the live systems. <b>The guard</b> checks every tool call: no money, no messages to people, no account changes, no edits to verifier code.", n: ["n-verify","n-work","n-guard"], e: ["e-verify-work"] },
+  { t: "6. Report, with checks", d: "<b>verify report</b> records the answer. An email must sound like Will. An account change must pass the <b>Google Ads Validator</b>. Anything only Will may do becomes a proposal.", n: ["n-work","n-report"], e: ["e-work-report"] },
+  { t: "7. Will says do it", d: "The agent shows the <b>exact email or change</b>. Will answers in plain words. <b>send / push</b> proves from the transcript that Will approved that exact text, acts once, and reads the result back.", n: ["n-report","n-show","n-will","n-act"], e: ["e-report-show","e-show-will","e-will-act"] },
+  { t: "8. Verify again", d: "The thread calls <b>verify</b> again. A fixed item closes. Anything still failing goes around the loop again, <b>until the check passes</b> or only Will's items are left.", n: ["n-act","n-verify","n-work"], e: ["e-act-verify","e-verify-work"] },
+  { t: "9. Edits earn autonomy", d: "Every send records <b>how much Will changed</b> the draft. When a type of email goes out unchanged 90% of the time, that type can go alone. The guard opens <b>one type at a time</b>.", n: ["n-act","n-edit","n-ladder","n-guard"], e: ["e-act-edit","e-edit-ladder","e-ladder-guard"] },
+  { t: "10. Misses become checks", d: "When an agent gets something wrong, the miss goes to the <b>Verifier gate</b>, which builds a new check with a test from the real case. The <b>change gate</b> runs the tests, refuses a removed rule, and asks Jev if the change makes anything looser. Looser goes to Will.", n: ["n-miss","n-vgate","n-cgate","n-verify"], e: ["e-miss-vgate","e-vgate-cgate","e-cgate-verify"] },
+];
+const COLORS = { "e-clock-cond": "--trigger", "e-heart-cond": "--trigger", "e-note-catch": "--memory", "e-show-will": "--will",
+  "e-will-act": "--will", "e-act-edit": "--learn", "e-edit-ladder": "--learn", "e-ladder-guard": "--learn",
+  "e-miss-vgate": "--learn", "e-vgate-cgate": "--learn", "e-cgate-verify": "--learn" };
+
+const svg = document.getElementById("svg"), layer = document.getElementById("dots-layer");
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const NS = "http://www.w3.org/2000/svg";
+for (const id of ALL_EDGES) {                       // one travelling dot per edge, shown only when the edge is on
+  document.getElementById(id).setAttribute("marker-end", "url(#arrow)");
+  const c = document.createElementNS(NS, "circle");
+  c.setAttribute("r", "5"); c.setAttribute("class", "dot"); c.dataset.edge = id;
+  c.style.fill = `var(${COLORS[id] || "--agent"})`;
+  const m = document.createElementNS(NS, "animateMotion");
+  m.setAttribute("dur", "1.6s"); m.setAttribute("repeatCount", "indefinite");
+  const mp = document.createElementNS(NS, "mpath"); mp.setAttribute("href", "#" + id);
+  m.appendChild(mp); c.appendChild(m); layer.appendChild(c);
+}
+
+let i = 0, playing = !reduced, timer = null;
+const dots = document.getElementById("dots");
+STAGES.forEach((s, k) => {
+  const b = document.createElement("button");
+  b.textContent = k === 0 ? "•" : k; b.setAttribute("aria-label", s.t);
+  b.onclick = () => { stop(); show(k); };
+  dots.appendChild(b);
+});
+
+function show(k) {
+  i = (k + STAGES.length) % STAGES.length;
+  const s = STAGES[i];
+  document.getElementById("ctitle").textContent = s.t;
+  document.getElementById("ctext").innerHTML = s.d;
+  svg.classList.toggle("dim", i !== 0);
+  for (const id of ALL_NODES) document.getElementById(id).classList.toggle("on", s.n.includes(id));
+  for (const id of ALL_EDGES) {
+    const on = s.e.includes(id), el = document.getElementById(id);
+    el.classList.toggle("on", on);
+    el.setAttribute("marker-end", on ? "url(#arrowOn)" : "url(#arrow)");
+  }
+  for (const c of layer.children) c.classList.toggle("on", s.e.includes(c.dataset.edge));
+  [...dots.children].forEach((b, k2) => b.toggleAttribute("aria-current", k2 === i) || (k2 === i && b.setAttribute("aria-current", "step")));
+  [...dots.children].forEach((b, k2) => k2 === i ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current"));
+}
+function tick() { show(i + 1); }
+function play() { playing = true; document.getElementById("play").textContent = "Pause"; clearInterval(timer); timer = setInterval(tick, 7000); }
+function stop() { playing = false; document.getElementById("play").textContent = "Play"; clearInterval(timer); }
+document.getElementById("play").onclick = () => playing ? stop() : play();
+document.getElementById("next").onclick = () => { stop(); show(i + 1); };
+document.getElementById("prev").onclick = () => { stop(); show(i - 1); };
+addEventListener("keydown", e => {
+  if (e.key === "ArrowRight") { stop(); show(i + 1); }
+  if (e.key === "ArrowLeft") { stop(); show(i - 1); }
+  if (e.key === " ") { e.preventDefault(); playing ? stop() : play(); }
+});
+document.getElementById("theme").onclick = () => {
+  const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("theme", r.dataset.theme); } catch (e) {}
+};
+try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+show(0);
+if (playing) play(); else document.getElementById("play").textContent = "Play";
+</script>
+</body>
+</html>
