@@ -57,7 +57,7 @@ svg { display: block; width: 100%; min-width: 900px; height: auto; }
 .box { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; transition: stroke .4s, fill .4s, opacity .4s; }
 .node text { fill: var(--ink); font-family: var(--font); transition: opacity .4s; }
 .node .t { font-size: 16px; font-weight: 700; }
-.node .s { font-size: 12.5px; fill: var(--muted); }
+.node .s { font-size: 11.5px; fill: var(--muted); }
 .node .chip { stroke: none; }
 .node { transition: opacity .4s; }
 .dim .node:not(.on), .dim .zone:not(.on) { opacity: .28; }
@@ -166,26 +166,26 @@ svg { display: block; width: 100%; min-width: 900px; height: auto; }
         <text class="lbl" x="1112" y="84">verify again until it passes</text>
 
         <!-- nodes: x, y, w=180, h=68 -->
-        <g class="node k-trigger" id="n-clock"><rect class="box" x="40" y="82" width="190" height="68" rx="14"/><rect class="chip" x="40" y="82" width="6" height="68" rx="3"/><text class="t" x="58" y="111">Clock</text><text class="s" x="58" y="132">A full check for each client, daily</text></g>
-        <g class="node k-trigger" id="n-heart"><rect class="box" x="40" y="180" width="190" height="68" rx="14"/><rect class="chip" x="40" y="180" width="6" height="68" rx="3"/><text class="t" x="58" y="209">Heartbeat</text><text class="s" x="58" y="230">Email, meetings, texts · 5 min</text></g>
-        <g class="node k-agent" id="n-cond"><rect class="box" x="290" y="132" width="180" height="68" rx="14"/><rect class="chip" x="290" y="132" width="6" height="68" rx="3"/><text class="t" x="308" y="161">Conductor</text><text class="s" x="308" y="182">Opens one thread per client</text></g>
+        <g class="node k-trigger" id="n-clock"><rect class="box" x="40" y="82" width="190" height="68" rx="14"/><rect class="chip" x="40" y="82" width="6" height="68" rx="3"/><text class="t" x="58" y="111">Clock</text><text class="s" x="58" y="132">Daily check per client</text></g>
+        <g class="node k-trigger" id="n-heart"><rect class="box" x="40" y="180" width="190" height="68" rx="14"/><rect class="chip" x="40" y="180" width="6" height="68" rx="3"/><text class="t" x="58" y="209">Heartbeat</text><text class="s" x="58" y="230">Email, meetings, texts</text></g>
+        <g class="node k-agent" id="n-cond"><rect class="box" x="290" y="132" width="180" height="68" rx="14"/><rect class="chip" x="290" y="132" width="6" height="68" rx="3"/><text class="t" x="308" y="161">Conductor</text><text class="s" x="308" y="182">One thread per client</text></g>
         <g class="node k-memory" id="n-note"><rect class="box" x="290" y="262" width="180" height="68" rx="14"/><rect class="chip" x="290" y="262" width="6" height="68" rx="3"/><text class="t" x="308" y="291">Client notebook</text><text class="s" x="308" y="312">Goals, promises, log</text></g>
 
         <g class="node k-agent" id="n-catch"><rect class="box" x="555" y="86" width="180" height="68" rx="14"/><rect class="chip" x="555" y="86" width="6" height="68" rx="3"/><text class="t" x="573" y="115">Catch up</text><text class="s" x="573" y="136">Notebook, email, meetings</text></g>
         <g class="node k-check" id="n-verify"><rect class="box" x="765" y="86" width="180" height="68" rx="14"/><rect class="chip" x="765" y="86" width="6" height="68" rx="3"/><text class="t" x="783" y="115">verify</text><text class="s" x="783" y="136">The verifier, as a tool</text></g>
         <g class="node k-agent" id="n-work"><rect class="box" x="975" y="86" width="180" height="68" rx="14"/><rect class="chip" x="975" y="86" width="6" height="68" rx="3"/><text class="t" x="993" y="115">Work each finding</text><text class="s" x="993" y="136">By its playbook</text></g>
         <g class="node k-check" id="n-report"><rect class="box" x="975" y="214" width="180" height="68" rx="14"/><rect class="chip" x="975" y="214" width="6" height="68" rx="3"/><text class="t" x="993" y="243">verify report</text><text class="s" x="993" y="264">Voice · Ads Validator</text></g>
-        <g class="node k-agent" id="n-show"><rect class="box" x="765" y="214" width="180" height="68" rx="14"/><rect class="chip" x="765" y="214" width="6" height="68" rx="3"/><text class="t" x="783" y="243">Show Will</text><text class="s" x="783" y="264">The exact email or change</text></g>
+        <g class="node k-agent" id="n-show"><rect class="box" x="765" y="214" width="180" height="68" rx="14"/><rect class="chip" x="765" y="214" width="6" height="68" rx="3"/><text class="t" x="783" y="243">Show Will</text><text class="s" x="783" y="264">The exact text</text></g>
 
         <g class="node k-will" id="n-will"><rect class="box" x="765" y="486" width="180" height="68" rx="14"/><rect class="chip" x="765" y="486" width="6" height="68" rx="3"/><text class="t" x="783" y="515">Will</text><text class="s" x="783" y="536">"do it"</text></g>
-        <g class="node k-check" id="n-act"><rect class="box" x="975" y="486" width="180" height="68" rx="14"/><rect class="chip" x="975" y="486" width="6" height="68" rx="3"/><text class="t" x="993" y="515">send / push</text><text class="s" x="993" y="536">Proves approval, acts once</text></g>
+        <g class="node k-check" id="n-act"><rect class="box" x="975" y="486" width="180" height="68" rx="14"/><rect class="chip" x="975" y="486" width="6" height="68" rx="3"/><text class="t" x="993" y="515">send / push</text><text class="s" x="993" y="536">Proves yes, acts once</text></g>
 
-        <g class="node k-learn" id="n-edit"><rect class="box" x="975" y="612" width="180" height="68" rx="14"/><rect class="chip" x="975" y="612" width="6" height="68" rx="3"/><text class="t" x="993" y="641">Edit rate</text><text class="s" x="993" y="662">How much Will changed</text></g>
-        <g class="node k-learn" id="n-ladder"><rect class="box" x="765" y="612" width="180" height="68" rx="14"/><rect class="chip" x="765" y="612" width="6" height="68" rx="3"/><text class="t" x="783" y="641">Autonomy ladder</text><text class="s" x="783" y="662">A type goes alone at 90%</text></g>
+        <g class="node k-learn" id="n-edit"><rect class="box" x="975" y="612" width="180" height="68" rx="14"/><rect class="chip" x="975" y="612" width="6" height="68" rx="3"/><text class="t" x="993" y="641">Edit rate</text><text class="s" x="993" y="662">How much Will edits</text></g>
+        <g class="node k-learn" id="n-ladder"><rect class="box" x="765" y="612" width="180" height="68" rx="14"/><rect class="chip" x="765" y="612" width="6" height="68" rx="3"/><text class="t" x="783" y="641">Autonomy ladder</text><text class="s" x="783" y="662">Alone at 90% unedited</text></g>
 
-        <g class="node k-learn" id="n-miss"><rect class="box" x="40" y="486" width="180" height="68" rx="14"/><rect class="chip" x="40" y="486" width="6" height="68" rx="3"/><text class="t" x="58" y="515">A miss</text><text class="s" x="58" y="536">Wrong claim, false alarm</text></g>
+        <g class="node k-learn" id="n-miss"><rect class="box" x="40" y="486" width="180" height="68" rx="14"/><rect class="chip" x="40" y="486" width="6" height="68" rx="3"/><text class="t" x="58" y="515">A miss</text><text class="s" x="58" y="536">Wrong claim or alarm</text></g>
         <g class="node k-learn" id="n-vgate"><rect class="box" x="290" y="486" width="180" height="68" rx="14"/><rect class="chip" x="290" y="486" width="6" height="68" rx="3"/><text class="t" x="308" y="515">Verifier gate</text><text class="s" x="308" y="536">Builds the new check</text></g>
-        <g class="node k-check" id="n-cgate"><rect class="box" x="290" y="612" width="180" height="68" rx="14"/><rect class="chip" x="290" y="612" width="6" height="68" rx="3"/><text class="t" x="308" y="641">Change gate</text><text class="s" x="308" y="662">Tests + Jev · looser → Will</text></g>
+        <g class="node k-check" id="n-cgate"><rect class="box" x="290" y="612" width="180" height="68" rx="14"/><rect class="chip" x="290" y="612" width="6" height="68" rx="3"/><text class="t" x="308" y="641">Change gate</text><text class="s" x="308" y="662">Tests + Jev</text></g>
 
         <g id="dots-layer"></g>
       </svg>
